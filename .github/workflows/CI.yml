@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.version == 'nightly' }}
+    timeout-minutes: 60
+    permissions:
+      actions: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.11'
+          - '1.10'
+          - '1.8'
+          - 'nightly'
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        arch:
+          - x64
+
+    steps:
+      # Checkout the repository
+      - uses: actions/checkout@v4
+
+      # Set up Julia
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+
+      # Cache Julia packages
+      - uses: julia-actions/cache@v2
+
+      # Instantiate and resolve packages
+      - name: Instantiate packages
+        run: julia -e 'using Pkg; Pkg.instantiate(); Pkg.resolve()'
+
+      # Explicitly install ConcurrentCollections 0.1.1 to satisfy hms_jl
+      - name: Install ConcurrentCollections
+        run: julia -e 'using Pkg; Pkg.add(PackageSpec(name="ConcurrentCollections", version="0.1.1"))'
+
+      # Develop hms_jl locally (DEV version)
+      - name: Develop hms_jl
+        run: julia -e 'using Pkg; Pkg.develop(path=".")'
+
+      # Build the package
+      - uses: julia-actions/julia-buildpkg@v1
+
+      # Run tests
+      - uses: julia-actions/julia-runtest@v1
+
+      # Process coverage
+      - uses: julia-actions/julia-processcoverage@v1
+
+      # Upload coverage to Codecov
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

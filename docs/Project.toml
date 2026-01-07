@@ -1,0 +1,8 @@
+[deps]
+ConcurrentCollections = "5060bff5-0b44-40c5-b522-fcd3ca5cecdd"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+hms_jl = "e8a7ceb1-99d9-4ed8-9423-a05c7ce6343c"
+
+[compat]
+Documenter = "1"
+julia = "1.10"
