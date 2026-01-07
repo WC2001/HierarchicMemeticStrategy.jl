@@ -27,7 +27,6 @@ Evolutionary = "0.11.1"
 LineSearches = "7.5.1"
 Optim = "1.13.3"
 PlotlyJS = "0.18.17"
-Statistics = "1.8.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
