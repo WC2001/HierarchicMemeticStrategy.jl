@@ -6,18 +6,19 @@ A structure containing the results of an HMS optimization run.
 struct HMSResult
     metaepoch_summaries::Vector{MetaepochSummary}
     hms_result_visualizer::HMSResultVisualizer
+    optimization_problem::OptimizationProblem
     solution::Vector{Float64}
     best_fitness::Float64
     fitness_evaluation_count::Int
 end
 
-function HMSResult(metaepoch_summaries::Vector{MetaepochSummary}, hms_result_visualizer::HMSResultVisualizer)
+function HMSResult(metaepoch_summaries::Vector{MetaepochSummary}, hms_result_visualizer::HMSResultVisualizer, problem::OptimizationProblem)
     last_summary = metaepoch_summaries[end]
     solution = last_summary.solution
     best_fitness = last_summary.best_fitness
     fitness_evaluation_count = last_summary.fitness_evaluation_count
 
-    HMSResult(metaepoch_summaries, hms_result_visualizer, solution, best_fitness, fitness_evaluation_count)
+    HMSResult(metaepoch_summaries, hms_result_visualizer, problem, solution, best_fitness, fitness_evaluation_count)
 end
 
 function Base.show(io::IO, result::HMSResult)
@@ -92,10 +93,18 @@ Show interactive plot presenting changes in populations during metaepochs.
 - `result::HMSResult`: The result object returned by the optimizer.
 - `x_index::Int`: The index of the dimension to plot on the x-axis (default: `1`).
 - `y_index::Int`: The index of the dimension to plot on the y-axis (default: `2`).
+- `filename::String`: (Optional) The name of the output HTML file. If provided without the `.html` 
+  extension, it will be added automatically. If left empty, a default name with a timestamp 
+  is generated (e.g., `hms_plot_2026-01-11_12-00-00.html`).
 """
-function plotPopulations(result::HMSResult, x_index::Int=1, y_index::Int=2)
-    savePopulationsPNGs(result.hms_result_visualizer, x_index, y_index)
-    populations_over_metaepochs = plotPopulations(result.hms_result_visualizer, x_index, y_index)
+function plotPopulations(result::HMSResult, x_index::Int=1, y_index::Int=2, filename::String="")
+    populations_over_metaepochs = plotPopulations(
+        result.hms_result_visualizer,
+        result.optimization_problem,
+        x_index, 
+        y_index,
+        filename
+    )
     display(populations_over_metaepochs)
 end
 
@@ -121,7 +130,7 @@ Plot single Deme population over metaepochs.
 - `y_index::Int`: The index of the dimension to plot on the y-axis (default: `2`).
 """
 function plotDeme(result::HMSResult, deme_index::Int=1, x_index::Int=1, y_index::Int=2)
-    deme_plot = plotDemeHistory(result.hms_result_visualizer,deme_index, x_index, y_index)
+    deme_plot = plotDemeHistory(result.hms_result_visualizer, result.optimization_problem, deme_index, x_index, y_index)
     display(deme_plot)
 end
 

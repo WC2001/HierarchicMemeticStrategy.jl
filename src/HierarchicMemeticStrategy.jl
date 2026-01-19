@@ -133,14 +133,14 @@ module HierarchicMemeticStrategy
         if tree_height < 1
             throw(ArgumentError("Tree height must be greater or equal 1."))
         end
+        
+        start_time = time()
 
         root = Deme(optimization_problem, nothing, population_sizes[1], create_population)
-
-        total_metaepoch_time = 0.0
-        start_time = time()
         demes::Vector{Deme} = [root]
         metaepochs_count::Int = 0
         metaepoch_summaries = Vector{MetaepochSummary}()
+        total_evolution_time = Atomic{Float64}(0.0)
         fitness_evaluations_count = Atomic{Int}(0)
 
         cached_f = CustomCache(optimization_problem.fitness_function)
@@ -162,7 +162,7 @@ module HierarchicMemeticStrategy
                     tid = threadid()
                     deme = active_demes[i]
 
-                    start_metaepoch_time = time()
+                    
                     deme_evaluations_count = 0
 
                     deme_f = function(x)
@@ -176,7 +176,7 @@ module HierarchicMemeticStrategy
                     config = level_config[deme.level]
                     bounds = problem_bounds(optimization_problem)
                     initial_population = deepcopy(deme.population.genomes)
-
+                    start_metaepoch_time = time()
                     metaepoch_result = run_metaepoch_at_level(
                         config,
                         deme_f,
@@ -185,6 +185,8 @@ module HierarchicMemeticStrategy
                         minimize,
                         sigma[deme.level]
                     )
+                    end_metaepoch_time = time()
+                    atomic_add!(total_evolution_time, end_metaepoch_time - start_metaepoch_time)
 
                     deme.evaluations_count += deme_evaluations_count
 
@@ -229,7 +231,7 @@ module HierarchicMemeticStrategy
             else
             
                 for deme in active_demes
-                    start_metaepoch_time = time()
+
                     deme_evaluations_count = 0
         
                     deme_f = function(x)
@@ -244,6 +246,7 @@ module HierarchicMemeticStrategy
                     config::TreeLevelConfig = level_config[deme.level]
                     bounds::Bounds = problem_bounds(optimization_problem)
                     initial_population::Vector{Vector{Float64}} = deepcopy(deme.population.genomes)
+                    start_metaepoch_time = time()
                     metaepoch_result::MetaepochResult = run_metaepoch_at_level(
                         config,
                         deme_f,
@@ -253,7 +256,7 @@ module HierarchicMemeticStrategy
                         sigma[deme.level]
                     )
                     end_metaepoch_time = time()
-                    total_metaepoch_time += end_metaepoch_time - start_metaepoch_time
+                    atomic_add!(total_evolution_time, end_metaepoch_time - start_metaepoch_time)
         
                     deme.evaluations_count += deme_evaluations_count
         
@@ -290,13 +293,11 @@ module HierarchicMemeticStrategy
 
             demes = next_metaepoch_demes
             best = get_best_solution(demes, minimize)
-            
-            ##TODO add time
             summary = MetaepochSummary(
                 deepcopy(demes),
                 best.fitness,
                 best.solution,
-                0.0,
+                total_evolution_time[],
                 fitness_evaluations_count[],
                 blocked_sprouts,
             )
@@ -338,10 +339,12 @@ module HierarchicMemeticStrategy
         end
 
         result_visualizer = HMSResultVisualizer(metaepoch_summaries)
+        total_time = time() - start_time
 
         hms_result = HMSResult(
             metaepoch_summaries,
-            result_visualizer
+            result_visualizer,
+            optimization_problem
         )
         
         return hms_result
