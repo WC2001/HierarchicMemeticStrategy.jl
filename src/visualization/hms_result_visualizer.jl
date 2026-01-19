@@ -1,12 +1,19 @@
 using PlotlyJS
 using Colors: distinguishable_colors, hex
 using DefaultApplication
+using Dates
 
 struct HMSResultVisualizer
     summaries::Vector{MetaepochSummary}
 end
 
-function plotDemeHistory(visualizer::HMSResultVisualizer, deme_index::Int, x_index::Int, y_index::Int)
+function plotDemeHistory(
+    visualizer::HMSResultVisualizer, 
+    prob::OptimizationProblem,
+    deme_index::Int, 
+    x_index::Int, 
+    y_index::Int
+)
     summaries = visualizer.summaries
     n_summaries = length(summaries)
 
@@ -14,7 +21,8 @@ function plotDemeHistory(visualizer::HMSResultVisualizer, deme_index::Int, x_ind
         error("deme_index ($deme_index) is out of bounds; only $(length(summaries[end].demes)) demes created.")
     end
 
-    genome_length = length(summaries[1].demes[1].population.genomes[1])
+    bounds = problem_bounds(prob)
+    genome_length = length(bounds.lower)
 
     if x_index < 1 || x_index > genome_length
         error("x_index ($x_index) out of bounds for genome length $genome_length")
@@ -28,6 +36,9 @@ function plotDemeHistory(visualizer::HMSResultVisualizer, deme_index::Int, x_ind
             error("y_index ($y_index) out of bounds for genome length $genome_length")
         end
     end
+
+    x_range = [bounds.lower[x_index], bounds.upper[x_index]]
+    y_range = use_zero_y ? [-1.0, 1.0] : [bounds.lower[y_index], bounds.upper[y_index]]
 
     colors = distinguishable_colors(n_summaries)
     traces = GenericTrace[]
@@ -64,18 +75,24 @@ function plotDemeHistory(visualizer::HMSResultVisualizer, deme_index::Int, x_ind
     
     layout = Layout(
         title = "Deme $deme_index",
-        xaxis = attr(title = "x_$x_index"),
-        yaxis = attr(title = "x_$y_index")
+        xaxis = attr(title = "Dimension $x_index", range = x_range, autorange = false),
+        yaxis = attr(title = "Dimension $y_index", range = y_range, autorange = false)
     )
     
     plot(traces, layout)
 end
 
-
-function savePopulationsPNGs(visualizer::HMSResultVisualizer, x_index::Int, y_index::Int; output_dir::String = "/Users/a.wiktor/Downloads/tmp_plots")
+function plotPopulations(
+    visualizer::HMSResultVisualizer,
+    prob::OptimizationProblem, 
+    x_index::Int, 
+    y_index::Int,
+    filename::String = ""
+)
     summaries = visualizer.summaries
     n_metaepochs = length(summaries)
-    genome_length = length(summaries[1].demes[1].population.genomes[1])
+    bounds = problem_bounds(prob)
+    genome_length = length(bounds.lower)
 
     if x_index < 1 || x_index > genome_length
         error("x_index ($x_index) out of bounds for genome length $genome_length")
@@ -90,69 +107,12 @@ function savePopulationsPNGs(visualizer::HMSResultVisualizer, x_index::Int, y_in
         end
     end
 
-    n_demes = length(summaries[end].demes)
-    colors = distinguishable_colors(n_demes)
-
-    for epoch_idx in 1:n_metaepochs
-        deme_scatters = GenericTrace[]
-
-        for deme_idx in 1:n_demes
-            deme = epoch_idx <= length(summaries) && deme_idx <= length(summaries[epoch_idx].demes) ?
-                summaries[epoch_idx].demes[deme_idx] : nothing
-
-            if deme === nothing
-                push!(deme_scatters, scatter(x=[], y=[], mode="markers", marker=attr(opacity=0.0)))
-            else
-                genomes = deme.population.genomes
-                x_vals = [genome[x_index] for genome in genomes]
-                y_vals = use_zero_y ? zeros(length(genomes)) : [genome[y_index] for genome in genomes]
-
-                push!(deme_scatters, scatter(
-                    x = x_vals,
-                    y = y_vals,
-                    mode = "markers",
-                    name = "Deme $deme_idx",
-                    marker = attr(color = colors[deme_idx])
-                ))
-            end
-        end
-
-        layout = Layout(
-            title = "Populations - Metaepoch $epoch_idx",
-            xaxis = attr(title = "x_$x_index"),
-            yaxis = attr(title = use_zero_y ? "(0)" : "x_$y_index"),
-        )
-
-        plt = plot(deme_scatters, layout)
-        filename = joinpath(output_dir, "metaepoch_$(lpad(string(epoch_idx), 2, '0')).png")
-        savefig(plt, filename)
-    end
-end
-
-
-
-function plotPopulations(visualizer::HMSResultVisualizer, x_index::Int, y_index::Int)
-    summaries = visualizer.summaries
-    n_metaepochs = length(summaries)
-    genome_length = length(summaries[1].demes[1].population.genomes[1])
-
-    if x_index < 1 || x_index > genome_length
-        error("x_index ($x_index) out of bounds for genome length $genome_length")
-    end
-
-    use_zero_y = false
-    if y_index < 1 || y_index > genome_length
-        if genome_length == 1
-            use_zero_y = true
-        else
-            error("y_index ($y_index) out of bounds for genome length $genome_length")
-        end
-    end
+    x_range = [bounds.lower[x_index], bounds.upper[x_index]]
+    y_range = use_zero_y ? [-1.0, 1.0] : [bounds.lower[y_index], bounds.upper[y_index]]
 
     n_demes = length(summaries[end].demes)
     colors = distinguishable_colors(n_demes)
 
-    
     epoch_traces = Vector{Vector{GenericTrace}}(undef, n_metaepochs)
 
     for epoch_idx in 1:n_metaepochs
@@ -188,16 +148,12 @@ function plotPopulations(visualizer::HMSResultVisualizer, x_index::Int, y_index:
 
     initial_traces = epoch_traces[1]
 
-    # assign unique IDs to preserve color consistency
     for traces in epoch_traces
         for (j, trace) in enumerate(traces)
             trace[:uid] = "trace-$j"
         end
     end
 
-    # --------------------
-    # Create frames
-    # --------------------
     frames = [
         frame(
             data = epoch_traces[i],
@@ -207,9 +163,6 @@ function plotPopulations(visualizer::HMSResultVisualizer, x_index::Int, y_index:
         for i in 1:n_metaepochs
     ]
 
-    # --------------------
-    # Slider (controls frames)
-    # --------------------
     steps = [
         attr(
             method = "animate",
@@ -231,21 +184,24 @@ function plotPopulations(visualizer::HMSResultVisualizer, x_index::Int, y_index:
         len = 1.0
     )]
 
-    # --------------------
-    # Layout
-    # --------------------
     layout = Layout(
         title = "Populations by Metaepoch",
-        xaxis = attr(title = "x_$x_index"),
-        yaxis = attr(title = use_zero_y ? "(0)" : "x_$y_index"),
+        xaxis = attr(title = "Dimension $x_index", range = x_range, autorange = false),
+        yaxis = attr(title = use_zero_y ? "(0)" : "Dimension $y_index", range = y_range, autorange = false),
         sliders = sliders
     )
     
     p = Plot(initial_traces, layout, frames)
     
-    filename = "populations_x$(x_index)_y$(y_index).html"
-    savefig(p, filename)
-    DefaultApplication.open(filename)
+    final_filename = if isempty(filename)
+        timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
+        "hms_plot_$(timestamp).html"
+    else
+        endswith(filename, ".html") ? filename : filename * ".html"
+    end
+
+    savefig(p, final_filename)
+    DefaultApplication.open(final_filename)
 end
 
 
