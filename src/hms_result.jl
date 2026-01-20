@@ -85,7 +85,7 @@ function metaepoch_data(result::HMSResult)
 end
 
 """
-    plotPopulations(result::HMSResult)
+    plotPopulations(result::HMSResult; x_index=1, y_index=2, filename="")
 
 Show interactive plot presenting changes in populations during metaepochs.
 
@@ -97,7 +97,7 @@ Show interactive plot presenting changes in populations during metaepochs.
   extension, it will be added automatically. If left empty, a default name with a timestamp 
   is generated (e.g., `hms_plot_2026-01-11_12-00-00.html`).
 """
-function plotPopulations(result::HMSResult, x_index::Int=1, y_index::Int=2, filename::String="")
+function plotPopulations(result::HMSResult; x_index::Int=1, y_index::Int=2, filename::String="")
     populations_over_metaepochs = plotPopulations(
         result.hms_result_visualizer,
         result.optimization_problem,
@@ -119,7 +119,7 @@ function plotBestFitness(result::HMSResult)
 end
 
 """
-     plotDeme(result::HMSResult)
+     plotDeme(result::HMSResult; deme_index::Int=1, x_index::Int=1, y_index::Int=2)
 
 Plot single Deme population over metaepochs.
 
@@ -129,7 +129,7 @@ Plot single Deme population over metaepochs.
 - `x_index::Int`: The index of the dimension to plot on the x-axis (default: `1`).
 - `y_index::Int`: The index of the dimension to plot on the y-axis (default: `2`).
 """
-function plotDeme(result::HMSResult, deme_index::Int=1, x_index::Int=1, y_index::Int=2)
+function plotDeme(result::HMSResult; deme_index::Int=1, x_index::Int=1, y_index::Int=2)
     deme_plot = plotDemeHistory(result.hms_result_visualizer, result.optimization_problem, deme_index, x_index, y_index)
     display(deme_plot)
 end

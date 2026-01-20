@@ -70,9 +70,9 @@ best_fitness(::HMSResult)
 iterations(::HMSResult)
 f_calls(::HMSResult)
 metaepoch_data(::HMSResult)
-plotPopulations(::HMSResult, ::Int, ::Int)
+plotPopulations(::HMSResult; ::Int, ::Int, ::String)
 plotBestFitness(::HMSResult)
-plotDeme(::HMSResult, ::Int, ::Int, ::Int)
+plotDeme(::HMSResult; ::Int, ::Int, ::Int)
 ```
 
 
