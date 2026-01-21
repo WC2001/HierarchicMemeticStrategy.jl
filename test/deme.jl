@@ -83,7 +83,7 @@ using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme,
             nothing
         )
 
-        HierarchicMemeticStrategy.update!(deme, metaepoch_result, false)
+        HierarchicMemeticStrategy.update_deme!(deme, metaepoch_result, false)
 
         @test deme.best_solution == solution
         @test deme.best_fitness == value

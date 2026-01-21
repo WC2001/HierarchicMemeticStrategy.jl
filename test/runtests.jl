@@ -12,7 +12,8 @@ using Test
         "sprout_condition.jl",
         "stop_conditions.jl",
         "evolutionary_test.jl",
-        "hms.jl"
+        "hms.jl",
+        "optimization_interface.jl"
         
     ]
         include(tests)

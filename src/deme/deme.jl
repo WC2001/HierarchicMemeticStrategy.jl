@@ -17,7 +17,7 @@ mutable struct Deme
     is_active::Bool
 
     function Deme(
-        problem::OptimizationProblem,
+        problem::HMSOptimizationProblem,
         parent::Union{Deme, Nothing},
         population_size::Int,
         create_population::Function
@@ -84,13 +84,12 @@ mutable struct Deme
 
 end
 
-function update!(deme::Deme, metaepoch_result::MetaepochResult, minimize::Bool = false)
+function update_deme!(deme::Deme, metaepoch_result::MetaepochResult, minimize::Bool = false)
     
     solution = metaepoch_result.solution
     value = metaepoch_result.best_fitness
     population = metaepoch_result.populations[end]
 
-    # Assign values
     deme.population.genomes = population
     push!(deme.best_fitness_per_metaepoch, value)
     push!(deme.best_solution_per_metaepoch, solution)
@@ -114,7 +113,7 @@ function update!(deme::Deme, metaepoch_result::MetaepochResult, minimize::Bool =
     return deme
 end
 
-function update!(deme::Deme, result::Optim.OptimizationResults, minimize::Bool = true)
+function update_deme!(deme::Deme, result::Optim.OptimizationResults, minimize::Bool = true)
     solution = Optim.minimizer(result)
     value = Optim.minimum(result)
     fval = minimize ? value : -value

@@ -3,9 +3,9 @@ using Statistics
 mutable struct Population
     genomes::Vector{Vector{Float64}}
     fitnesses::Vector{Float64}
-    problem::OptimizationProblem
+    problem::HMSOptimizationProblem
 
-    function Population(genomes::Vector{Vector{Float64}}, fitnesses::Vector{Float64}, problem::OptimizationProblem)
+    function Population(genomes::Vector{Vector{Float64}}, fitnesses::Vector{Float64}, problem::HMSOptimizationProblem)
         new([Float64.(genome) for genome in genomes], Float64.(fitnesses), problem)
     end
 

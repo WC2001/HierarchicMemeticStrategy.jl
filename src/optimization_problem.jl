@@ -1,24 +1,24 @@
 using Random, LinearAlgebra
 
-abstract type OptimizationProblem end
+abstract type HMSOptimizationProblem end
 
-function evaluate(::OptimizationProblem, genome::Vector{Float64}; kwargs...) :: Float64
+function evaluate(::HMSOptimizationProblem, genome::Vector{Float64}; kwargs...) :: Float64
     throw(MethodError(evaluate, (genome, kwargs...)))
 end
 
-function worse_than(::OptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
+function worse_than(::HMSOptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
     throw(MethodError(worse_than, (first_fitness, second_fitness)))
 end
 
-function problem_bounds(::OptimizationProblem) :: Bounds
+function problem_bounds(::HMSOptimizationProblem) :: Bounds
     throw(MethodError(bounds, ()))
 end
 
-function maximize_fitness(::OptimizationProblem) :: Bool
+function maximize_fitness(::HMSOptimizationProblem) :: Bool
     throw(MethodError(maximize_fitness, ()))
 end
 
-function equivalent(::OptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
+function equivalent(::HMSOptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
     return first_fitness == second_fitness
 end
 
@@ -49,7 +49,7 @@ problem = FunctionProblem(
 )
 ```
 """
-struct FunctionProblem <: OptimizationProblem
+struct FunctionProblem <: HMSOptimizationProblem
     fitness_function::Function
     _bounds::Bounds
     _maximize::Bool

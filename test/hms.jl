@@ -232,7 +232,7 @@
         ]
 
         problem = FunctionProblem(beale, lower, upper, false)
-        result = hms(optimization_problem = problem, level_config = level_config, seed = seed)
+        result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_solution = [3.0, 0.5]
 

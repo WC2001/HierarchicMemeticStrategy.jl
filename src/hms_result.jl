@@ -6,13 +6,13 @@ A structure containing the results of an HMS optimization run.
 struct HMSResult
     metaepoch_summaries::Vector{MetaepochSummary}
     hms_result_visualizer::HMSResultVisualizer
-    optimization_problem::OptimizationProblem
+    optimization_problem::HMSOptimizationProblem
     solution::Vector{Float64}
     best_fitness::Float64
     fitness_evaluation_count::Int
 end
 
-function HMSResult(metaepoch_summaries::Vector{MetaepochSummary}, hms_result_visualizer::HMSResultVisualizer, problem::OptimizationProblem)
+function HMSResult(metaepoch_summaries::Vector{MetaepochSummary}, hms_result_visualizer::HMSResultVisualizer, problem::HMSOptimizationProblem)
     last_summary = metaepoch_summaries[end]
     solution = last_summary.solution
     best_fitness = last_summary.best_fitness

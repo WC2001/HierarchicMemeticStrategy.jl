@@ -9,7 +9,7 @@ end
 
 function plotDemeHistory(
     visualizer::HMSResultVisualizer, 
-    prob::OptimizationProblem,
+    prob::HMSOptimizationProblem,
     deme_index::Int, 
     x_index::Int, 
     y_index::Int
@@ -84,7 +84,7 @@ end
 
 function plotPopulations(
     visualizer::HMSResultVisualizer,
-    prob::OptimizationProblem, 
+    prob::HMSOptimizationProblem, 
     x_index::Int, 
     y_index::Int,
     filename::String = ""
