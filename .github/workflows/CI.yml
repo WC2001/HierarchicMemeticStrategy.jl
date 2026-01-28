@@ -14,8 +14,8 @@ concurrency:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
-    runs-on: ${{ matrix.os }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.platform.os }} - ${{ matrix.platform.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.platform.os }}
     continue-on-error: ${{ matrix.version == 'nightly' }}
     timeout-minutes: 60
     permissions:
@@ -29,12 +29,11 @@ jobs:
           - '1.11'
           - '1.10'
           - 'nightly'
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
-        arch:
-          - x64
+        platform:
+          - { os: ubuntu-latest,  arch: x64 }
+          - { os: windows-latest, arch: x64 }
+          - { os: macos-15-intel, arch: x64 }
+          - { os: macos-latest,   arch: aarch64 }
 
     steps:
       # Checkout the repository
@@ -44,7 +43,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          arch: ${{ matrix.platform.arch }}
 
       # Cache Julia packages
       - uses: julia-actions/cache@v2
@@ -53,12 +52,10 @@ jobs:
       - name: Instantiate packages
         run: julia -e 'using Pkg; Pkg.instantiate(); Pkg.resolve()'
 
-      # Explicitly install ConcurrentCollections 0.1.1 to satisfy hms_jl
       - name: Install ConcurrentCollections
         run: julia -e 'using Pkg; Pkg.add(PackageSpec(name="ConcurrentCollections", version="0.1.1"))'
 
-      # Develop hms_jl locally (DEV version)
-      - name: Develop hms_jl
+      - name: Develop Hier
         run: julia -e 'using Pkg; Pkg.develop(path=".")'
 
       # Build the package
