@@ -153,7 +153,7 @@ module HierarchicMemeticStrategy
         end
 
         if !isnothing(seed)
-            rng = Random.MersenneTwister(seed)
+            rng = Random.seed!(TaskLocalRNG(), seed)
             reseed!(create_population, rng)
         end
 
