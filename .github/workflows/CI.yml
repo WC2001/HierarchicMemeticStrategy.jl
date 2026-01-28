@@ -29,12 +29,15 @@ jobs:
           - '1.11'
           - '1.10'
           - 'nightly'
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
-        arch:
-          - x64
+        include:
+          - os: macos-latest
+            arch: aarch64
+          - os: macos-13
+            arch: x64
+          - os: ubuntu-latest
+            arch: x64
+          - os: windows-latest
+            arch: x64
 
     steps:
       # Checkout the repository
