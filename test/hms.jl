@@ -3,7 +3,11 @@
     seed = 42
 
     @testset "basic example" begin
-        f = FunctionProblem(x -> x[1]*x[1]+x[1]+2, [-5], [5], false)
+        f = FunctionProblem(
+            fitness_function = x -> x[1]*x[1]+x[1]+2,
+            lower = [-5],
+            upper = [5]
+        )
         result = hms(optimization_problem=f, seed=seed)
 
         expected_result = [-0.5]
@@ -13,7 +17,11 @@
     end
 
     @testset "basic example parallel" begin
-        f = FunctionProblem(x -> x[1]*x[1]+x[1]+2, [-5], [5], false)
+        f = FunctionProblem(
+            fitness_function = x -> x[1]*x[1]+x[1]+2,
+            lower = [-5],
+            upper = [5]
+        )
         result = hms(optimization_problem=f, seed=seed, parallel=true)
 
         expected_result = [-0.5]
@@ -32,13 +40,43 @@
             TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
-        
-        problem = FunctionProblem(rosenbrock, lower, upper, false)
+
+        problem = FunctionProblem(
+            fitness_function = rosenbrock,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_result = [1.0, 1.0]
         @test euclidean(result.solution, expected_result) < 1e-2
+    end
 
+    @testset "rosenbrock 2D with initial guess" begin
+        rosenbrock(x) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
+        lower = [Float64(-30), Float64(-30)]
+        upper = [Float64(30), Float64(30)]
+        
+        level_config = [
+            TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
+            TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
+        ]
+        
+        problem = FunctionProblem(
+            fitness_function = rosenbrock,
+            lower = lower,
+            upper = upper,
+            u0 = [10.0, 10.0]
+        )
+        result = hms(
+            optimization_problem=problem, 
+            create_population=NormalPopulationCreator(),
+            level_config=level_config, 
+            seed=seed
+        )
+
+        expected_result = [1.0, 1.0]
+        @test euclidean(result.solution, expected_result) < 1e-2
     end
 
     @testset "rosenbrock 2D v2" begin
@@ -50,8 +88,13 @@
             TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
             TreeLevelConfig(EvolutionaryDEMetaepoch, Dict("iterations" => 3, "seed" => seed)),
         ]
+
+        problem = FunctionProblem(
+            fitness_function = rosenbrock,
+            lower = lower,
+            upper = upper
+        )
         
-        problem = FunctionProblem(rosenbrock, lower, upper, false)
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
         expected_result = [1.0, 1.0]
         @test euclidean(result.solution, expected_result) < 1e-2
@@ -65,13 +108,16 @@
 
         lower = [Float64(-512), Float64(-512)]
         upper = [Float64(512), Float64(512)]
-        #sigma = [[200.0, 200.0], [100.0, 100.0]]
         sigma = [[100.0, 100.0], [60.0, 60.0]]
         level_config = [
             TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
-        problem = FunctionProblem(eggholder, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = eggholder,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, sigma=sigma, seed=seed)
         expected_solution = [512, 404.2319]
         expected_fitness = eggholder(expected_solution)
@@ -95,7 +141,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
     
-        problem = FunctionProblem(rastrigin, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = rastrigin,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_solution = [0.0, 0.0]
@@ -126,7 +176,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
     
-        problem = FunctionProblem(ackley, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = ackley,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
         
         expected_solution = [0.0, 0.0]
@@ -157,7 +211,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
     
-        problem = FunctionProblem(ackley, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = ackley,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
         
         expected_solution = fill(0.0, D)
@@ -181,7 +239,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
 
-        problem = FunctionProblem(schwefel, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = schwefel,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_solution = [420.9687, 420.9687]
@@ -207,7 +269,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
 
-        problem = FunctionProblem(griewank, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = griewank,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_solution = [0.0, 0.0]
@@ -231,7 +297,11 @@
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
 
-        problem = FunctionProblem(beale, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = beale,
+            lower = lower,
+            upper = upper
+        )
         result = hms(optimization_problem=problem, level_config=level_config, seed=seed)
 
         expected_solution = [3.0, 0.5]

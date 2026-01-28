@@ -1,4 +1,3 @@
-using Distributions
 using UUIDs
 using Optim
 
@@ -20,16 +19,18 @@ mutable struct Deme
         problem::HMSOptimizationProblem,
         parent::Union{Deme, Nothing},
         population_size::Int,
-        create_population::Function
+        create_population::AbstractPopulationCreator,
+        sigma::Vector{Vector{Float64}}
     )
         level = isnothing(parent) ? 1 : parent.level + 1
-        sprout = isnothing(parent) ? nothing : parent.best_solution_per_metaepoch[end]
-        new_population_vector = create_population(
-            sprout,
-            problem_bounds(problem).lower,
-            problem_bounds(problem).upper,
-            population_size,
-            level
+        sprout = isnothing(parent) ? get_u0(problem) : parent.best_solution_per_metaepoch[end]
+        new_population_vector = create_population(;
+            mean = sprout,
+            lower = problem_bounds(problem).lower,
+            upper = problem_bounds(problem).upper,
+            population_size = population_size,
+            tree_level = level,
+            sigma = sigma
         )
 
         new_population = Population(new_population_vector, Float64[], problem)
@@ -130,85 +131,6 @@ end
 
 function is_root(deme::Deme)::Bool
     return deme.parent_id === nothing
-end
-
-"""
-    default_create_population(sigma::Vector{Vector{Float64}}, rng::AbstractRNG = Random.default_rng())
-
-Create a population initialization that chooses between uniform and normal distributions based on tree level.
-
-# Arguments
-- `sigma::Vector{Vector{Float64}}`: A vector of step-size vectors for each level (e.g., from `default_sigma`).
-- `rng::AbstractRNG`: An optional random number generator for reproducibility.
-
-# Returns
-- A function `(mean, lower, upper, population_size, tree_level, sigma, rng) -> Vector{Vector{Float64}}`.
-
-# Description
-The returned function handles two distinct initialization strategies:
-1. **Root Level (Level 1)**: Uses uniform distribution. This ensures the initial search covers the entire search space defined by `lower` and `upper`.
-2. **Subsequent Levels (Level > 1)**: Uses uses normal distribution centered around the `mean` (new deme). The spread is controlled by the `sigma` corresponding to tree level.
-
-This approach is fundamental to HMS: the root explores globally, while children refine locally.
-
-"""
-function default_create_population(sigma, rng::AbstractRNG = Random.default_rng())
-    return function(mean::Union{Vector{Float64}, Nothing}, lower::Vector{Float64}, upper::Vector{Float64}, population_size::Int, tree_level::Int)
-        if tree_level == 1
-            return unified_population(mean, lower, upper, population_size, tree_level, sigma, rng)
-        else
-            return normal_population(mean, lower, upper, population_size, tree_level, sigma, rng)
-        end
-    end
-end
-
-function unified_population(
-    mean::Union{Vector{Float64}, Nothing}, 
-    lower::Vector{Float64}, 
-    upper::Vector{Float64}, 
-    population_size::Int, 
-    tree_level::Int, 
-    sigma::Vector{Vector{Float64}},
-    rng::AbstractRNG = Random.default_rng()
-    )
-    genomes = Vector{Vector{Float64}}()
-    for _ in 1:population_size
-        individual = [
-            rand(rng, Uniform(lower[i], upper[i]))
-            for i in eachindex(lower)
-        ]
-        push!(genomes, individual)
-    end
-    return genomes
-end
-
-
-
-function normal_population(
-    mean::Vector{Float64}, 
-    lower::Vector{Float64}, 
-    upper::Vector{Float64}, 
-    population_size::Int, 
-    tree_level::Int, 
-    sigma::Vector{Vector{Float64}},
-    rng::AbstractRNG = Random.default_rng()
-    )
-    sd = sigma[tree_level]
-
-    # Generate (population_size - 1) genomes
-    genomes = Vector{Vector{Float64}}()
-    for _ in 1:(population_size - 1)
-        individual = [
-            rand(rng, Truncated(Normal(mean[i], sd[i]), lower[i], upper[i]))
-            for i in eachindex(mean)
-        ]
-        push!(genomes, individual)
-    end
-
-    # Append the mean as a genome (last individual)
-    push!(genomes, copy(mean))
-
-    return genomes
 end
 
 function get_not_processed_demes(demes::Vector{Deme}, processed_demes::Vector{Deme})::Vector{Deme}

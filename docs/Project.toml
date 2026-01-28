@@ -3,6 +3,7 @@ ConcurrentCollections = "5060bff5-0b44-40c5-b522-fcd3ca5cecdd"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 HierarchicMemeticStrategy = "e8a7ceb1-99d9-4ed8-9423-a05c7ce6343c"
+Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 
 [compat]
 Documenter = "1"

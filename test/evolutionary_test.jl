@@ -1,6 +1,6 @@
 using Test
 using Evolutionary
-using HierarchicMemeticStrategy: default_sigma, unified_population
+using HierarchicMemeticStrategy: default_sigma
 
 
 @testset "Evolutionary GA Integration" begin
@@ -12,9 +12,17 @@ using HierarchicMemeticStrategy: default_sigma, unified_population
     upper = [10.0] 
     population_size = 1000 
     tree_level = 1  
-    sigma = default_sigma(lower,upper,1) 
+    sigma = default_sigma(lower,upper,1)
+    creator = DefaultPopulationCreator()
 
-    initial_population = unified_population(mean, lower, upper, population_size, tree_level, sigma)
+    initial_population = creator(;
+        mean = mean, 
+        lower = lower, 
+        upper = upper, 
+        population_size = population_size, 
+        tree_level = 1, 
+        sigma = sigma
+    )
 
     function Evolutionary.trace!(record::Dict{String, Any}, objfun, state, population, method, options)
 

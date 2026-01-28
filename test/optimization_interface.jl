@@ -17,16 +17,17 @@ using Optimization
     end
 
     @testset "Rosenbrock 2D" begin
-        f(x, p) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
+        f(x, p) = (p[1] - x[1])^2 + (p[2] * (x[2] - x[1]^2)^2)
         lb = [-30.0, -30.0]
         ub = [30.0, 30.0]
+        p = [1.0, 100.0]
         
         level_config = [
             TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
             TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
         ]
         
-        prob = OptimizationProblem(f, [0.0, 0.0], lb=lb, ub=ub)
+        prob = OptimizationProblem(f, [0.0, 0.0], p, lb=lb, ub=ub)
         sol = solve(prob, HMSSolver(level_config=level_config, seed=seed))
         @test euclidean(sol.u, [1.0, 1.0]) < 1e-2
     end
