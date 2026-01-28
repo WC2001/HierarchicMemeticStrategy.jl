@@ -8,7 +8,7 @@ end
 
 function optimize!(opt::LBFGSOptimizer, deme::Deme, cached_f::CustomCache)
 
-    problem::OptimizationProblem = deme.population.problem
+    problem::HMSOptimizationProblem = deme.population.problem
     deme_evaluations_count = 0
     deme_f = function(x)
         if !iscached(cached_f, x)
@@ -71,7 +71,7 @@ function optimize!(opt::LBFGSOptimizer, deme::Deme, cached_f::CustomCache)
     # println("fitness calls: ", deme_evaluations_count)
    
     deme.evaluations_count += deme_evaluations_count
-    update!(deme, result)
+    update_deme!(deme, result)
        
     return deme_evaluations_count
 end

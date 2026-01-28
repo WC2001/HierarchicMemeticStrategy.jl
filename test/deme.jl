@@ -1,4 +1,4 @@
-using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme, MetaepochResult
+using HierarchicMemeticStrategy: default_sigma, Deme, MetaepochResult
 
 @testset "Deme struct" begin
 
@@ -8,10 +8,14 @@ using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme,
         tree_height = 2
         sigma = default_sigma(lower, upper, tree_height)
         population_size = 20
-        create_population = default_create_population(sigma)
-        f(x) = (x) -> x^3 + 2x^2 - 11 
-        problem = FunctionProblem(f, lower, upper, false)
-        deme = Deme(problem, nothing, population_size, create_population)
+        create_population = DefaultPopulationCreator()
+        f = (x) -> x^3 + 2x^2 - 11
+        problem = FunctionProblem(
+            fitness_function = f,
+            lower = lower,
+            upper = upper
+        )
+        deme = Deme(problem, nothing, population_size, create_population, sigma)
 
         @test deme.level == 1
         @test length(deme.population.genomes) == population_size
@@ -27,11 +31,15 @@ using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme,
         tree_height = 3
         population_size = 35
         sigma = default_sigma(lower, upper, tree_height)
-        create_population = default_create_population(sigma)
+        create_population = DefaultPopulationCreator()
         rosenbrock(x) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
-        problem = FunctionProblem(rosenbrock, lower, upper, false)
+        problem = FunctionProblem(
+            fitness_function = rosenbrock,
+            lower = lower,
+            upper = upper
+        )
        
-        deme = Deme(problem, nothing, population_size, create_population)
+        deme = Deme(problem, nothing, population_size, create_population, sigma)
 
         @test deme.level == 1
         @test length(deme.population.genomes) == population_size
@@ -47,13 +55,17 @@ using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme,
         tree_height = 2
         population_size = 45
         sigma = default_sigma(lower, upper, tree_height)
-        create_population = default_create_population(sigma)
+        create_population = DefaultPopulationCreator()
         rosenbrock(x) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
-        problem = FunctionProblem(rosenbrock, lower, upper, false)
-        parent = Deme(problem, nothing, population_size, create_population)
+        problem = FunctionProblem(
+            fitness_function = rosenbrock,
+            lower = lower,
+            upper = upper
+        )
+        parent = Deme(problem, nothing, population_size, create_population, sigma)
         sprout = [1.5, -2.2]
         parent.best_solution_per_metaepoch = [sprout]
-        child = Deme(problem, parent, population_size, create_population)
+        child = Deme(problem, parent, population_size, create_population, sigma)
 
         @test child.level == 2
         @test length(child.population.genomes) == population_size
@@ -83,7 +95,7 @@ using HierarchicMemeticStrategy: default_sigma, default_create_population, Deme,
             nothing
         )
 
-        HierarchicMemeticStrategy.update!(deme, metaepoch_result, false)
+        HierarchicMemeticStrategy.update_deme!(deme, metaepoch_result, false)
 
         @test deme.best_solution == solution
         @test deme.best_fitness == value

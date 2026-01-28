@@ -9,7 +9,7 @@ end
 
 function plotDemeHistory(
     visualizer::HMSResultVisualizer, 
-    prob::OptimizationProblem,
+    prob::HMSOptimizationProblem,
     deme_index::Int, 
     x_index::Int, 
     y_index::Int
@@ -84,7 +84,7 @@ end
 
 function plotPopulations(
     visualizer::HMSResultVisualizer,
-    prob::OptimizationProblem, 
+    prob::HMSOptimizationProblem, 
     x_index::Int, 
     y_index::Int,
     filename::String = ""
@@ -129,8 +129,18 @@ function plotPopulations(
             else
                 genomes = deme.population.genomes
                 x_vals = [g[x_index] for g in genomes]
-                y_vals = use_zero_y ? zeros(length(genomes)) :
-                                      [g[y_index] for g in genomes]
+                y_vals = use_zero_y ? zeros(length(genomes)) : [g[y_index] for g in genomes]
+                
+                marker_symbols = fill("circle", length(genomes))
+                if epoch_idx == n_metaepochs && n_metaepochs > 1
+                    prev_demes = summaries[n_metaepochs - 1].demes
+                    if deme_idx <= length(prev_demes)
+                        prev_count = length(prev_demes[deme_idx].population.genomes)
+                        if length(genomes) == prev_count + 1
+                            marker_symbols[end] = "x"
+                        end
+                    end
+                end
 
                 push!(deme_scatters,
                       scatter(
@@ -138,7 +148,7 @@ function plotPopulations(
                           y = y_vals,
                           mode = "markers",
                           name = "Deme $deme_idx",
-                          marker = attr(color = colors[deme_idx], opacity=1.0)
+                          marker = attr(color = colors[deme_idx], opacity=1.0, symbol = marker_symbols)
                       ))
             end
         end
@@ -184,11 +194,45 @@ function plotPopulations(
         len = 1.0
     )]
 
+    updatemenus = [
+        attr(
+            type = "buttons",
+            buttons = [
+                attr(
+                    label = "Play",
+                    method = "animate",
+                    args = [nothing, attr(
+                        frame = attr(duration = 500, redraw = true),
+                        fromcurrent = true,
+                        transition = attr(duration = 300, easing = "quadratic-in-out")
+                    )]
+                ),
+                attr(
+                    label = "Pause",
+                    method = "animate",
+                    args = [[nothing], attr(
+                        mode = "immediate",
+                        frame = attr(duration = 0, redraw = true),
+                        transition = attr(duration = 0)
+                    )]
+                )
+            ],
+            direction = "left",
+            pad = attr(r = 10, t = 87),
+            showactive = false,
+            x = 0.5,
+            xanchor = "center",
+            y = -0.2,
+            yanchor = "top"
+        )
+    ]
+
     layout = Layout(
         title = "Populations by Metaepoch",
         xaxis = attr(title = "Dimension $x_index", range = x_range, autorange = false),
         yaxis = attr(title = use_zero_y ? "(0)" : "Dimension $y_index", range = y_range, autorange = false),
-        sliders = sliders
+        sliders = sliders,
+        updatemenus = updatemenus
     )
     
     p = Plot(initial_traces, layout, frames)

@@ -15,7 +15,8 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Tutorial" => "tutorial.md",
-        "Configuration" => "hms_config.md"
+        "Configuration" => "hms_config.md",
+        "Optimization.jl Interface" => "optimization_jl.md"
     ],
 )
 

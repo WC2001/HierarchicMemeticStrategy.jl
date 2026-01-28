@@ -23,7 +23,7 @@ module HierarchicMemeticStrategy
     
     using Base.Threads
     
-    export OptimizationProblem,
+    export HMSOptimizationProblem,
         FunctionProblem,
         hms,
         HMSResult,
@@ -40,6 +40,8 @@ module HierarchicMemeticStrategy
         EvolutionaryGAMetaepoch,
         EvolutionaryCMAESMetaepoch,
         EvolutionaryDEMetaepoch,
+        GlobalStopCondition,
+        LocalStopCondition,
         ProblemEvaluationLimitReached,
         GlobalMetaepochLimitReached,
         LocalProblemEvaluationLimitReached,
@@ -55,8 +57,14 @@ module HierarchicMemeticStrategy
         Bounds,
         MetaepochRunner,
         MetaepochResult,
-        sc_max_metric,
-        LocalOptimizer
+        LocalOptimizer,
+        HMSSolver,
+        AbstractPopulationCreator,
+        DefaultPopulationCreator,
+        NormalPopulationCreator,
+        AbstractSproutCondition,
+        MetricSproutCondition,
+        DefaultSproutCondition
 
     
 
@@ -66,15 +74,14 @@ module HierarchicMemeticStrategy
     Execute the Hierarchical Multi-Strategy (HMS) optimization algorithm.
 
     # Arguments
-    - `optimization_problem::OptimizationProblem`: The objective function and domain bounds.
+    - `optimization_problem::HMSOptimizationProblem`: The objective function and domain bounds.
     - `level_config::Vector{TreeLevelConfig}`: Configuration for each level of the HMS tree (default: `DEFAULT_LEVEL_CONFIG`).
-    - `tree_height::Int`: Height of the HMS tree (default: `length(level_config)`).
     - `sigma::Vector{Vector{Float64}}`: The \$ \\sigma \$ parameter for evolutionary algorithms and Gaussian mutation. It is specified for each dimension at each level of the hierarchy.
     - `gsc::GlobalStopCondition`: Condition to stop the entire optimization process.
     - `lsc::LocalStopCondition`: Condition to stop individual demes.
-    - `sprout_condition::Function`: Logic determining when a deme should sprout a child deme.
+    - `sprout_condition::AbstractSproutCondition`: Logic determining when a deme should sprout a child deme.
     - `population_sizes::Vector{Int}`: Number of individuals in demes at each level.
-    - `create_population::Function`: Function used to initialize deme populations.
+    - `create_population::AbstractPopulationCreator`: Strategy object for initializing deme populations.
     - `local_optimizer::LocalOptimizer`: The specific local optimizer to use (default `LBFGSOptimizer`).
     - `use_local_method::Bool`: Whether to apply a local optimization (default: `true`).
     - `minimize::Bool`: Set to `true` to minimize, `false` to maximize (default: `true`).
@@ -111,18 +118,15 @@ module HierarchicMemeticStrategy
     ```
     """
     function hms(;
-        optimization_problem::OptimizationProblem,
+        optimization_problem::HMSOptimizationProblem,
         level_config::Vector{TreeLevelConfig} = DEFAULT_LEVEL_CONFIG,
-        tree_height = length(level_config),
-        sigma::Vector{Vector{Float64}} = default_sigma(optimization_problem._bounds.lower, optimization_problem._bounds.upper, tree_height), 
+        sigma::Union{Nothing, Vector{Vector{Float64}}} = nothing, 
         gsc::GlobalStopCondition = GSC,
         lsc::LocalStopCondition = DEFAULT_LSC,
-        sprout_condition::Function = DEFAULT_SC(sigma),
-        population_sizes::Vector{Int} = default_population_sizes(tree_height),
+        sprout_condition::Union{Nothing, AbstractSproutCondition} = nothing,
+        population_sizes::Union{Nothing, Vector{Int}} = nothing,
         seed::Union{Nothing, Int} = nothing,
-        create_population::Function = seed === nothing ? 
-        default_create_population(sigma) : 
-        default_create_population(sigma, Random.seed!(TaskLocalRNG(), seed)),
+        create_population::Union{Nothing, AbstractPopulationCreator} = nothing,
         use_local_method::Bool = true,
         local_optimizer::LocalOptimizer = LBFGSOptimizer(),
         minimize::Bool = true,
@@ -130,13 +134,36 @@ module HierarchicMemeticStrategy
         parallel::Bool = false
     )   
 
+        tree_height = length(level_config)
+
+        if isnothing(sigma)
+            sigma = default_sigma(optimization_problem._bounds.lower, optimization_problem._bounds.upper, tree_height)
+        end
+
+        if isnothing(population_sizes)
+            population_sizes = default_population_sizes(tree_height)
+        end
+
+        if isnothing(sprout_condition)
+            sprout_condition = DefaultSproutCondition(sigma)
+        end
+
+        if isnothing(create_population)
+            create_population = DefaultPopulationCreator()
+        end
+
+        if !isnothing(seed)
+            rng = Random.seed!(TaskLocalRNG(), seed)
+            reseed!(create_population, rng)
+        end
+
         if tree_height < 1
             throw(ArgumentError("Tree height must be greater or equal 1."))
         end
         
         start_time = time()
 
-        root = Deme(optimization_problem, nothing, population_sizes[1], create_population)
+        root = Deme(optimization_problem, nothing, population_sizes[1], create_population, sigma)
         demes::Vector{Deme} = [root]
         metaepochs_count::Int = 0
         metaepoch_summaries = Vector{MetaepochSummary}()
@@ -196,7 +223,7 @@ module HierarchicMemeticStrategy
                         continue
                     end
 
-                    update!(deme, metaepoch_result, minimize)
+                    update_deme!(deme, metaepoch_result, minimize)
 
                     if lsc(deme, metaepoch_summaries)
                         deme.is_active = false
@@ -217,7 +244,8 @@ module HierarchicMemeticStrategy
                                 optimization_problem,
                                 deme,
                                 population_sizes[deme.level + 1],
-                                create_population
+                                create_population,
+                                sigma
                             )
                             push!(thread_local_next[tid], new_deme)
                         else
@@ -266,7 +294,7 @@ module HierarchicMemeticStrategy
                         continue
                     end
         
-                    deme = update!(deme, metaepoch_result, minimize)
+                    deme = update_deme!(deme, metaepoch_result, minimize)
                     
                     if lsc(deme, metaepoch_summaries)
                         deme.is_active = false
@@ -283,7 +311,7 @@ module HierarchicMemeticStrategy
                     candidate_demes = vcat(next_metaepoch_demes, get_not_processed_demes(demes, next_metaepoch_demes))
         
                     if sprout_condition(metaepoch_result.solution, deme.level + 1, candidate_demes)
-                        new_deme = Deme(optimization_problem, deme, population_sizes[deme.level + 1], create_population)
+                        new_deme = Deme(optimization_problem, deme, population_sizes[deme.level + 1], create_population, sigma)
                         push!(next_metaepoch_demes, new_deme)
                     else
                         push!(blocked_sprouts, metaepoch_result.solution)
@@ -348,6 +376,93 @@ module HierarchicMemeticStrategy
         )
         
         return hms_result
+    end
+
+    using Optimization
+    using OptimizationBase: allowsbounds
+    using SciMLBase: ReturnCode.Success
+
+    """
+        HMSSolver(; kwargs...)
+
+    Optimization algorithm for the `Optimization.jl` interface.
+
+    # Parameters
+    - `level_config::Vector{TreeLevelConfig}`: Configuration for each level of the HMS tree.
+    - `sigma::Vector{Vector{Float64}}`: The \$ \\sigma \$ parameter for evolutionary algorithms and Gaussian mutation. It is specified for each dimension at each level of the hierarchy.
+    - `gsc::GlobalStopCondition`: Condition to stop the entire optimization process.
+    - `lsc::LocalStopCondition`: Condition to stop individual demes.
+    - `sprout_condition::AbstractSproutCondition`: Logic determining when a deme should sprout a child deme.
+    - `population_sizes::Vector{Int}`: Number of individuals in demes at each level.
+    - `create_population::AbstractPopulationCreator`: Strategy object for initializing deme populations.
+    - `local_optimizer::LocalOptimizer`: The specific local optimizer to use (default `LBFGSOptimizer`).
+    - `use_local_method::Bool`: Whether to apply a local optimization (default: `true`).
+    - `minimize::Bool`: Set to `true` to minimize, `false` to maximize (default: `true`).
+    - `log_level::Int`: Verbosity of the output (0 for silent, 1 basic output, 2 basic string representation of hms tree).
+    - `parallel::Bool`: Enable multi-threaded execution (default: `false`).
+    - `seed::Union{Nothing, Int}`: Random seed for reproducibility.
+    """
+    Base.@kwdef struct HMSSolver <: Optimization.SciMLBase.AbstractOptimizationAlgorithm
+        level_config::Vector{TreeLevelConfig} = DEFAULT_LEVEL_CONFIG
+        sigma::Union{Nothing, Vector{Vector{Float64}}} = nothing
+        gsc::GlobalStopCondition = GSC
+        lsc::LocalStopCondition = DEFAULT_LSC
+        sprout_condition::Union{Nothing, AbstractSproutCondition} = nothing
+        population_sizes::Union{Nothing, Vector{Int}} = nothing
+        seed::Union{Nothing, Int} = nothing
+        create_population::Union{Nothing, AbstractPopulationCreator} = nothing
+        use_local_method::Bool = true
+        local_optimizer::LocalOptimizer = LBFGSOptimizer()
+        log_level::Int = 0
+        parallel::Bool = false
+        minimize::Bool = true
+    end
+
+    OptimizationBase.allowsbounds(::HMSSolver) = true
+
+    function Optimization.SciMLBase.__solve(prob::Optimization.SciMLBase.OptimizationProblem, opt::HMSSolver, args...; 
+                                       kwargs...)
+
+        if isnothing(prob.lb) || isnothing(prob.ub)
+            error("HMSSolver requires a bounded optimization problem (lb and ub must be provided).")
+        end
+        
+        cache = SciMLBase.init(prob, opt, args...; kwargs...)
+
+        hms_prob = FunctionProblem(
+            fitness_function = (x; kwargs...) -> prob.f(x, prob.p),
+            lower = prob.lb,
+            upper = prob.ub,
+            maximize = !opt.minimize,
+            u0 = prob.u0
+        )
+
+        hms_res = hms(
+            optimization_problem = hms_prob,
+            level_config = opt.level_config,
+            sigma = opt.sigma,
+            gsc = opt.gsc,
+            lsc = opt.lsc,
+            sprout_condition = opt.sprout_condition,
+            population_sizes = opt.population_sizes,
+            seed = opt.seed,
+            create_population = opt.create_population,
+            use_local_method = opt.use_local_method,
+            local_optimizer = opt.local_optimizer,
+            minimize = opt.minimize,
+            log_level = opt.log_level,
+            parallel = opt.parallel
+        )
+
+        return SciMLBase.build_solution(
+            cache, 
+            opt, 
+            hms_res.solution, 
+            hms_res.best_fitness;
+            original = hms_res,
+            retcode = SciMLBase.ReturnCode.Success
+        )
+
     end
 
 end

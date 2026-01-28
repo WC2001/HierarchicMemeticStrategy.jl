@@ -103,27 +103,36 @@ DEFAULT_LSC = MetaepochWithoutBestFitnessImprovement(10)
 ```
 ### Sprout condition
 
-Configurable parameter determining when a deme should sprout a child deme.
+Configurable strategy parameter determining when a deme should sprout a child deme.
 
-`HierarchicMemeticStrategy.jl` provides sprout condition based on euclidean distance between demes.
+#### Sprout condition interface
+
+All sprout conditions inherit from `AbstractSproutCondition`.
 
 ```@docs
-sc_max_metric
+HierarchicMemeticStrategy.AbstractSproutCondition
+```
+
+#### Sprout condition based on metrics
+
+The primary way to maintain diversity in HMS is to enforce a minimum distance between demes at the same level. This prevents multiple demes from converging to the same local optimum.
+
+```@docs
+HierarchicMemeticStrategy.MetricSproutCondition
 ```
 
 #### Default Sprout Condition
 
-The default SC uses euclidean distance with default max distances calculated
-based on sigma parameter.
+The default condition uses euclidean distance with default max distances calculated based on `sigma` parameter.
+
+```@docs
+HierarchicMemeticStrategy.DefaultSproutCondition
+```
 
 ```julia
 function sprout_default_euclidean_distances(sigma::Vector{Vector{Float64}})
     sprouting_condition_distance_ratio = 0.6
     return [sum(s .* sprouting_condition_distance_ratio) for s in sigma]
-end
-
-const DEFAULT_SC = function (sigma::Vector{Vector{Float64}})
-    return sc_max_metric(euclidean, sprout_default_euclidean_distances(sigma))   
 end
 ```
 
@@ -145,14 +154,26 @@ Parameter specifies number of individuals in demes at each level.
 HierarchicMemeticStrategy.default_population_sizes
 ```
 
-### Create population function
+### Population Initialization Interface
 
-Configurable parameter that specifies how new populations are created.
+The population initialization strategy determines how individuals are distributed within the search space, both at the start of the optimization and when new demes "sprout" from parents.
 
-#### Default create population
+#### The Abstract Population Strategy
+
+All population initializers must inherit from `AbstractPopulationCreator`. This ensures a consistent, type-safe contract across different initialization methods.
 
 ```@docs
-HierarchicMemeticStrategy.default_create_population
+HierarchicMemeticStrategy.AbstractPopulationCreator
+HierarchicMemeticStrategy.reseed!
+```
+
+#### Built-in Strategies
+
+Package provides 2 strategies. The default one is `DefaultPopulationCreator`.
+
+```@docs
+HierarchicMemeticStrategy.HierarchicMemeticStrategy.DefaultPopulationCreator
+HierarchicMemeticStrategy.NormalPopulationCreator
 ```
 
 ### Local optimizer

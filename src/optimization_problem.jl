@@ -1,24 +1,28 @@
 using Random, LinearAlgebra
 
-abstract type OptimizationProblem end
+abstract type HMSOptimizationProblem end
 
-function evaluate(::OptimizationProblem, genome::Vector{Float64}; kwargs...) :: Float64
+function get_u0(problem::HMSOptimizationProblem)
+    return hasfield(typeof(problem), :u0) ? problem.u0 : nothing
+end
+
+function evaluate(::HMSOptimizationProblem, genome::Vector{Float64}; kwargs...) :: Float64
     throw(MethodError(evaluate, (genome, kwargs...)))
 end
 
-function worse_than(::OptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
+function worse_than(::HMSOptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
     throw(MethodError(worse_than, (first_fitness, second_fitness)))
 end
 
-function problem_bounds(::OptimizationProblem) :: Bounds
+function problem_bounds(::HMSOptimizationProblem) :: Bounds
     throw(MethodError(bounds, ()))
 end
 
-function maximize_fitness(::OptimizationProblem) :: Bool
+function maximize_fitness(::HMSOptimizationProblem) :: Bool
     throw(MethodError(maximize_fitness, ()))
 end
 
-function equivalent(::OptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
+function equivalent(::HMSOptimizationProblem, first_fitness::Float64, second_fitness::Float64) :: Bool
     return first_fitness == second_fitness
 end
 
@@ -39,6 +43,9 @@ Construct an optimization problem for a standard mathematical function.
 - `upper::Vector`: A vector specifying the maximum allowable values for each dimension.
 - `maximize::Bool`: (Optional) Set to `true` for maximization, or `false` for 
   minimization (default).
+- `u0::Union{Vector{Float64}, Nothing}`: (Optional) An initial guess or starting point. 
+When provided, certain population creators (like `NormalPopulationCreator`) can use 
+this as the center of the initial root population.
 
 # Examples
 ```julia
@@ -49,8 +56,9 @@ problem = FunctionProblem(
 )
 ```
 """
-struct FunctionProblem <: OptimizationProblem
+struct FunctionProblem <: HMSOptimizationProblem
     fitness_function::Function
+    u0::Union{Vector{Float64}, Nothing}
     _bounds::Bounds
     _maximize::Bool
 
@@ -58,7 +66,8 @@ struct FunctionProblem <: OptimizationProblem
         fitness_function::Function,
         lower::Vector,
         upper::Vector,
-        maximize::Bool
+        maximize::Bool,
+        u0::Union{Vector{Float64}, Nothing}
     )
         if length(lower) != length(upper)
             throw(ArgumentError("Lower and upper bound vectors must be the same length. Got $(length(lower)) and $(length(upper))."))
@@ -67,12 +76,18 @@ struct FunctionProblem <: OptimizationProblem
         lower_f = Float64.(lower)
         upper_f = Float64.(upper)
         bounds = Bounds(lower_f, upper_f)
-        new(fitness_function, bounds, maximize)
+        new(fitness_function, u0, bounds, maximize)
     end
 end
 
-function FunctionProblem(; fitness_function::Function, lower::Vector, upper::Vector, maximize::Bool=false)
-    return FunctionProblem(fitness_function, lower, upper, maximize)
+function FunctionProblem(;
+    fitness_function::Function, 
+    lower::Vector,
+    upper::Vector, 
+    maximize::Bool=false, 
+    u0::Union{Vector{Float64}, Nothing}=nothing
+)
+    return FunctionProblem(fitness_function, lower, upper, maximize, u0)
 end
 
 function evaluate(problem::FunctionProblem, genome::Vector{Float64}; kwargs...) :: Float64
