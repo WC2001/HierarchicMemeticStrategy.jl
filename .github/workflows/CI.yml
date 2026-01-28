@@ -14,8 +14,8 @@ concurrency:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
-    runs-on: ${{ matrix.os }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.platform.os }} - ${{ matrix.platform.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.platform.os }}
     continue-on-error: ${{ matrix.version == 'nightly' }}
     timeout-minutes: 60
     permissions:
@@ -29,15 +29,11 @@ jobs:
           - '1.11'
           - '1.10'
           - 'nightly'
-        include:
-          - os: macos-latest
-            arch: aarch64
-          - os: macos-13
-            arch: x64
-          - os: ubuntu-latest
-            arch: x64
-          - os: windows-latest
-            arch: x64
+        platform:
+          - { os: ubuntu-latest,  arch: x64 }
+          - { os: windows-latest, arch: x64 }
+          - { os: macos-13,       arch: x64 }
+          - { os: macos-latest,   arch: aarch64 }
 
     steps:
       # Checkout the repository
