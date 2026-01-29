@@ -47,7 +47,6 @@ function eggholder(x::Vector{Float64})
     return -(x2 + 47) * sin(sqrt(abs(x2 + x1/2 + 47))) - x1 * sin(sqrt(abs(x1 - (x2 + 47))))
 end
 
-seed = 42
 lower = [-512.0, -512.0]
 upper = [512.0, 512.0]
 problem = FunctionProblem(
@@ -55,11 +54,14 @@ problem = FunctionProblem(
     lower=lower,
     upper=upper
 )
+
+seed = 42
 sigma = [[100.0, 100.0], [60.0, 60.0]]
 level_config = [
     TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
     TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
 ]
+
 result = hms(
     optimization_problem=problem,
     level_config=level_config,
