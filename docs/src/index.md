@@ -25,11 +25,10 @@ using HierarchicMemeticStrategy
 rosenbrock(x) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
 
 problem = FunctionProblem(
-    rosenbrock,
-    [-30.0, -30.0],
-    [30.0, 30.0],
-    false
+    fitness_function=rosenbrock,
+    lower=[-30.0, -30.0],
+    upper=[30.0, 30.0]
 )
 
-result = hms(optimization_problem = problem)
+result = hms(optimization_problem=problem)
 ```

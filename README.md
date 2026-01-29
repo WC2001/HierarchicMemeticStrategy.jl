@@ -30,13 +30,12 @@ using HierarchicMemeticStrategy
 rosenbrock(x) = (1 - x[1])^2 + (100 * (x[2] - x[1]^2)^2)
 
 problem = FunctionProblem(
-    rosenbrock,
-    [-30.0, -30.0],
-    [30.0, 30.0],
-    false
+    fitness_function=rosenbrock,
+    lower=[-30.0, -30.0],
+    upper=[30.0, 30.0]
 )
 
-result = hms(optimization_problem = problem)
+result = hms(optimization_problem=problem)
 ```
 
 ### Adjusted configuration
@@ -51,15 +50,19 @@ end
 seed = 42
 lower = [-512.0, -512.0]
 upper = [512.0, 512.0]
-problem = FunctionProblem(eggholder, lower, upper, false)
+problem = FunctionProblem(
+    fitness_function=eggholder,
+    lower=lower,
+    upper=upper
+)
 sigma = [[100.0, 100.0], [60.0, 60.0]]
 level_config = [
     TreeLevelConfig(EvolutionaryGAMetaepoch, Dict("seed" => seed)),
     TreeLevelConfig(EvolutionaryCMAESMetaepoch, Dict("seed" => seed)),
 ]
 result = hms(
-    optimization_problem = problem,
-    level_config = level_config,
+    optimization_problem=problem,
+    level_config=level_config,
     sigma=sigma,
     seed=seed 
 )

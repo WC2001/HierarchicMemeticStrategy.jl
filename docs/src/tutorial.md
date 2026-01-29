@@ -30,10 +30,9 @@ lower_bounds = [-5.0, -5.0];
 upper_bounds = [5.0, 5.0];
 
 problem = FunctionProblem(
-    fitness_function = rosenbrock,
-    lower = lower_bounds,
-    upper = upper_bounds,
-    maximize = false
+    fitness_function=rosenbrock,
+    lower=lower_bounds,
+    upper=upper_bounds
 );
 ```
 ```@docs
