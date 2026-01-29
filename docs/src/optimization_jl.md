@@ -22,7 +22,7 @@ lb = [-5.0, -5.0];
 ub = [5.0, 5.0];
 
 # 3. Create the OptimizationProblem
-prob = OptimizationProblem(rosenbrock, u0, p, lb = lb, ub = ub);
+prob = OptimizationProblem(rosenbrock, u0, p, lb=lb, ub=ub);
 
 sol = solve(prob, HMSSolver());
 
@@ -59,8 +59,8 @@ eggholder_problem = OptimizationProblem(
     eggholder, 
     [450.0, 400.0], 
     p, 
-    lb = [-512.0, -512.0], 
-    ub= [512.0, 512.0]
+    lb=[-512.0, -512.0], 
+    ub=[512.0, 512.0]
 );
 
 sigma = [[100.0, 100.0], [30.0, 30.0], [5.0, 5.0]];
