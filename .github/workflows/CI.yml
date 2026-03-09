@@ -46,7 +46,7 @@ jobs:
           arch: ${{ matrix.platform.arch }}
 
       # Cache Julia packages
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
 
       # Instantiate and resolve packages
       - name: Instantiate packages
